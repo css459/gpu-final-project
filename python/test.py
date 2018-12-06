@@ -15,24 +15,28 @@ import pandas as pd
 from random import randint
 
 gpus = 4
-samplesize = 95777830
+samplesize = 79739
 buffersize = 3000000
 sample_buffersize = 300000
 samples = []
 
-f = "xy.csv"
+f = "test_data/xy.csv"
 
 # Simulated resampling rate
 # the amount of buffer fills until
 # the buffer is resmapled.
-resmapling_rate = 4
+# (-1 means no refresh)
+resmapling_rate = -1
 
 
 def load():
-    d = pd.read_csv(f).values
+    d = pd.read_csv(f)
     while len(d) < buffersize:
-        d = d + pd.read_csv(f).values
-    return d.iloc[:buffersize,:]
+        d = d.append(pd.read_csv(f))
+        print(len(d) / buffersize)
+    out = d.iloc[:buffersize,:].values
+    print(out)
+    return out
 
 def make_buffers():
     return load(), [0] * buffersize
@@ -64,35 +68,12 @@ for i in range(gpus):
         # ----
 
         # Refresh the buffer if necessary
-        resmapling_rate -= 1
-        if resmapling_rate <= 0:
-            line_buffer, dirty_buffer = make_buffers()
-            resmapling_rate = 4
+        if resmapling_rate != -1:
+            resmapling_rate -= 1
+            if resmapling_rate <= 0:
+                line_buffer, dirty_buffer = make_buffers()
+                resmapling_rate = 4
 
         total_sampled += sample_buffersize
 
         print(total_sampled / samplesize)
-
-
-# for i in range(gpus):
-        # print("starting gpu", i)
-
-        # i = 0
-        # while i < samplesize:
-            # s = 0
-            # for ss in dirty:
-                # s += ss
-            # if s >= buffersize:
-                # d = pd.read_csv("x.csv", nrows=).values
-                # dirty = [0] * 5000000
-
-            # for j in range(buffersize):
-                # r = randint(0, 5000000-1)
-                # dirty[r] = 1
-                # samples.append(d[r])
-
-            # print(i / samplesize)
-
-            # i += buffersize
-            # samples = []
-

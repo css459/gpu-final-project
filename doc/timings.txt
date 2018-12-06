@@ -1,0 +1,30 @@
+-----------------------------------
+Data Loading
+-----------------------------------
+python script: data loading
+gpus = 4
+samplesize = 79739
+buffersize = 3000000
+sample_buffersize = 300000
+
+total time: 27.817
+inital line buffer load: 26.742
+percent of total time: 96.14%
+-----------------------------------
+CUDA: data loading
+gpus = 4
+samplesize = 79739
+buffersize = 3000000
+sample_buffersize = 300000
+
+total time: 8.807
+inital line buffer load: 4.118
+percent of total time: 46.76
+-----------------------------------
+-----------------------------------
+
+total speedup: 3.1585
+inital line buffer speedup: 6.737
+
+-----------------------------------
+-----------------------------------
