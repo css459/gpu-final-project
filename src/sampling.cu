@@ -253,7 +253,7 @@ bool random_subsample(float **output_sample_buffer, char **buffer, int *dirty_bu
             (*output_sample_buffer)[indexer] = (float) atof(tok);
         }
         free(sample);
-	free(tok);
+        free(tok);
     }
 
     printf("Dirty hits:%d\n", dirty_hits);
