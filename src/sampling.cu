@@ -21,7 +21,7 @@
 
 // The amount of memory (in percent) of global memory
 // to save for other purposes in each GPU
-#define GLOBAL_MEM_RESERVATION_PERCENT 0.90
+#define GLOBAL_MEM_RESERVATION_PERCENT 0.999
 
 // The size of the second intermediate buffer in
 // element count for each data packet send to a GPU
@@ -32,7 +32,7 @@
 #define DIRTY_TOLERANCE 0.70
 
 // Ignore print statements
-#define IGNORE_PRINTF
+//#define IGNORE_PRINTF
 #ifdef IGNORE_PRINTF
 #define printf(fmt, ...) (0)
 #endif
@@ -226,14 +226,8 @@ bool random_subsample(float **output_sample_buffer, char **buffer, int *dirty_bu
 
         // Get a random point in the buffer
         int rand_sample = rand() % (line_buffer_size);
-        char *sample = malloc(sizeof(char) * LINE_BUFFER_SIZE);
+        char *sample = (char *) malloc(sizeof(char) * LINE_BUFFER_SIZE);
         strcpy(sample, buffer[rand_sample]);
-
-        /*// Tokenize and place i*/
-        /*char *tok = strsep(buffer[rand_sample], ",");*/
-        /*wihle (strsep(buffer[rand_sample], ",") != NULL)*/
-
-        /*free(sample);*/
 
         // If we reach our tolerance, refresh buffer on next invocation.
         if (dirty_hits >= (DIRTY_TOLERANCE * samples) && !needs_refresh) {
@@ -254,17 +248,12 @@ bool random_subsample(float **output_sample_buffer, char **buffer, int *dirty_bu
         // Read tokens into samples array
         int j = 0;
         char *tok;
-        while(tok = strsep(&sample, ",") != NULL) {
+        while((tok = strsep(&sample, ",")) != NULL) {
             int indexer = (i * elements_per_line) + j++;
             (*output_sample_buffer)[indexer] = (float) atof(tok);
-            free(tok);
         }
         free(sample);
-        /*while (tok != NULL) {*/
-            /*int indexer = (i * elements_per_line) + j++;*/
-            /*(*output_sample_buffer)[indexer] = (float) atof(tok);*/
-            /*tok = strtok(NULL, ",");*/
-        /*}*/
+	free(tok);
     }
 
     printf("Dirty hits:%d\n", dirty_hits);
@@ -379,7 +368,7 @@ float** load_devices(SamplingProperties *props) {
             bool refresh = random_subsample(&interm, buffer, dirty, 0, props->line_buffer_size,
                     sample_buffer_size, props->elements_per_line, num_devices);
 
-            for (int k = 0; k < 20; k++ ) printf("%f ", interm[k]);
+            for (int k = 0; k < 21; k++ ) printf("%f ", interm[k]);
             printf("\n");
 
             // ----------------------------------------------------------------------------------------------------
