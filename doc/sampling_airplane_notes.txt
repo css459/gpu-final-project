@@ -1,0 +1,108 @@
+\section{Parallel Sub-Sampling and Loading of multiple GPUs for Large Data Sets}
+
+\subsection{Introduction}
+
+A major area of improvement we aimed to focus on is how data sets are loaded into GPU memory for processing. We placed particular attention on this topic since we found that it was often left out of other parallel Random Forest implementations or guidelines. For the purpose of this section and all following sections, we compare our solution to popular industry offerings in Python and SKLearn. 
+
+We optimize the loading procedures by using OpenMP where possible. Notably, we use a thread for each GPU to load with training data.
+
+\subsection{Random Sub-Sampling and Statistical Accuracy}
+
+Our sampling procedures assume large (10+ GB) data sets, and are designed to load GPU global memory banks in parallel using a double-buffer approach. Random areas of an input CSV are chosen, and initially loaded into a raw line buffer, which stores rows in a CSV as a series of strings. This buffer is then randomly sampled by a number of thread workers and converted into an array of floating-point numbers for each row sampled from the line-buffer. We call this intermediate floating-point buffer a sample-buffer. 
+
+By using two-buffers, we minimize the number of times we read from a target CSV file, which can be expensive. Additionally, we also minimize the number of times we send information to the GPU. Without these buffers, each GPU would have to open the target CSV, read a random row, and send it from host RAM to device global memory. This base-case solution could cause contention in file I/O on the host as well.
+
+We can maintain statistical accuracy for sampling a file of unknown $n$ number of rows such that each row has $\frac{1}{n}$ chance of being drawn from the CSV. This can be proven in the two buffer solution as such: 
+
+Let two buffers exist: $B_{line}$ of size $L$ and $B_{sample}$ of size $S$.
+
+The probability of randomly drawing a sample from a target CSV file is:
+
+\[p_{line} = \frac{1}{L}\]
+
+The probability of randomly drawing a sample from the line buffer $S$ times is:
+
+\[p_{sample} = \frac{S}{L}\]
+
+If $B_{sample}$ is randomly filled from $B_{line}$, then the total probability of choosing a random sub-sample observation from $B_{sample}$ is:
+
+\[p_{sample} = \frac{1}{S} \cdot \frac{S}{L} = \frac{1}{L} = p_{line}\]
+
+This holds since our sampling procedure is a modified Reservoir Sampling (Bootstrapping) [DEFINE] procedure that relies upon the approximate file size of the target file, rather than a constant stream. In this way, duplicate rows from the CSV may be drawn, but unlike traditional "Catch-and-Release" style Bootstrapping, duplicate rows will not enter the sub-sample buffer in our implementation. Instead, we use the number of duplicates found as an indicator for refreshing the line-buffer. Duplicates, however, can be encountered once the line-buffer is refreshed, but the program sampled the same previous row(s) from the file twice. This must be the case to maintain the property: $p_{sample} = \frac{1}{L}$.
+
+Furthermore, since $p_{sample}$ is equal to $p_{line}$, our algorithm need not make excessive reads from disk I/O, nor excessive memory copy calls to the GPU. Thus, we may instead compose our sub-samples for each GPU into batches. This batching is required due to another constraint: limited host RAM.
+
+Since we would like to load multiple GPUs in parallel, we cannot store the full sub-samples for each GPU entirely in RAM, nor can we store the entire CSV in RAM since it is either of an unknown size of extremely large. The following algorithm proposes a solution to load multiple GPUs in parallel with training data using a line-buffer and a sample-buffer for each GPU. In doing so, the RAM required by the algorithm is essentially fixed, so it may be defined by the user.
+
+\subsection{Random Sub-Sampling Algorithm for $n$ GPUs}
+
+As an example, if $n$ GPUs are requested to be filled with data from a file, \verb!x.csv!, our program will perform the following operations:
+
+\begin{enumerate}
+\item Given \verb!x.csv! and an approximate file size $X_{size}$ in bytes, choose a random byte in $[0, X_{size}]$. Call this point $R$.
+
+\item Search forwards and backwards in \verb!x.csv! from $R$ for the closest new line character (\verb!\n!). Let this number (in bytes) be $S$, the marker of the first row in the CSV we will sample.
+
+\item Given the size in bytes of: the elements in the CSV, the number of elements per row in the CSV, and the number of rows to sample in total, begin reading row-by-row at $S$ into a two-dimensional string array $B_{line}$.
+
+\item Repeat the above operations until $B_{line}$ is filled to the specified row count.
+
+\item Allocate a Boolean bitmap array of equal to the row count in $B_{line}$. Call this buffer $B_{dirty}$
+
+\item Create $n$ threads, where $n$ is the number of GPUs to fill. 
+
+\item For each thread $t_{n}$, use the byte-size information about the CSV, the total amount of global memory available in GPU $n$, and the desired occupancy percent $Oc_n$, to fill GPU $n$'s global memory $Oc_n$ percent full with training data from \verb!x.csv!. The indented operations are performed in parallel.
+
+\begin{enumerate}
+\item Calculate the number of rows (samples) which will fit in $Oc_n$ percent of GPU $n$'s global memory, call this row count $RC_n$.
+
+\item Create a CUDA stream for $t_n$.
+
+\item Allocate the total space in bytes required for $Oc_n$ percent occupancy in GPU $n$'s global memory.
+
+\item Create a one-dimensional floating-point buffer $B_{sample}$ with rows equal to $RC_n$ and columns equal to the number of elements in each row in \verb!x.csv!.
+
+\item Begin randomly sampling rows in $B_{line}$ and converting the string arrays into a stream of floating-point numbers.
+
+\item For a random sample in $B_{line}$ $r$, if $B_{dirty}[r]$ is 0, then add these numbers to $B_{sample}$.
+
+\item Mark $B_{dirty}[r]$ with a 1.
+
+\item While randomly sampling $B_{line}$, maintain a count $dirty_n$ for each $t_n$ -- The number of "dirty hits" (duplicates) found while sampling.
+
+\item For all $t_n$, if any $dirty_n$ reaches a tolerance value, store last load value $last_n$, and refresh $B_{line}$ by replacing all dirty-marked values with new, random values from \verb!x.csv!.
+
+\item If $t_n$'s buffer fills to completion, send $B_{sample}$ to GPU $n$'s global memory, resample $B_{sample}$ with new values from $B_{line}$.
+
+\end(enumerate}
+
+\item Repeat for all threads until all $n$ GPUs are filled to proper occupancy.
+
+\end(enumerate}
+
+\subsection{Loading Times Compared to Analogous Multi-Threaded and Sequential Implementations}
+
+The following chart represents the loading times of an equivalent number of random rows from a test CSV file (10 GB). This chart compares the total times to load discrete sample sets into GPU global memory banks and separate arrays in Python. The number of GPUs used is 4.
+
+Since we cannot hope to store 4 multiple-gigabyte data sets in RAM at once, the Python code implements an equivalent loading procedure repeated iteratively four times.
+
+
+% CHART HERE
+
+The following chart represents the total loading times (from CSV to GPU global memory) for $n$ number of GPUs in parallel. Additionally, the following chart also plots the total loading time for $n$ GPUs if the GPUs are loaded sequentially using a single thread.
+
+% CHART HERE
+
+\subsection{Cross Validation and Random Forest Storage Strategy for Multiple GPUs}
+
+Once all GPUs have the needed training data in global memory, the data can then be split into training and test data for training a Random Forest Classifier with a given set of hyper-parameters (Arguments that define how the model behaves). To limit the number of global memory accesses, we delegate a Random Forest classifier to its own block. Within each block, indexes are filed at random from the global memory data set into training and test sets. Each index points to a row in global memory. The block also stores the tree nodes of the random forest.
+
+The training and test set allocation defines a procedure of statistical model testing called "Cross Validation." In short, we simply split our data into a set that the model is trained on, and then test its accuracy on a set which the model has never seen before.
+
+In this way, the number of blocks required is equal to the number of combinations of hyper-parameters. Therefore, if there are $n$ hyper-parameters, $n!$ blocks are required to train $n!$ Random Forests in parallel. The hyper parameters are required for the Random Forest with the highest accuracy. 
+
+The following section defines the inner-workings of the above strategy, by growing trees of a Random Forest in parallel.
+
+% ALL NEXT SECTIONS WRITTEN BY ANDREW
+
+

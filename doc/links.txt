@@ -1,0 +1,32 @@
+Papers and References ------------------------
+
+CudaTree
+http://www.news.cs.nyu.edu/~jinyang/pub/biglearning13-forest.pdf
+https://github.com/EasonLiao/CudaTree
+
+Random Forests for Big Data
+https://arxiv.org/pdf/1511.08327.pdf
+
+Parallel & Scalable Machine Learning (Slide Deck)
+http://morrisriedel.de/wp-content/uploads/2018/03/Parallel-and-Scalable-Machine-Learning-12-Parallelization-Benefits-and-Cross-Validation-Practicals-v1.pdf
+
+Random Forest Implementations -----------------------
+
+SKLearn
+https://github.com/scikit-learn/scikit-learn/blob/bac89c2/sklearn/model_selection/_split.py#L540
+
+CudaTree (see above)
+
+General
+https://machinelearningmastery.com/implement-random-forest-scratch-python/
+
+
+
+----------------------------------------------------------------------------------
+-------- Sampling
+
+https://en.wikipedia.org/wiki/Reservoir_sampling
+
+https://stackoverflow.com/questions/2612648/reservoir-sampling
+
+----------------------------------------------------------------------------------
