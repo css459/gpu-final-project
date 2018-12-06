@@ -226,7 +226,14 @@ bool random_subsample(float **output_sample_buffer, char **buffer, int *dirty_bu
 
         // Get a random point in the buffer
         int rand_sample = rand() % (line_buffer_size);
-        char *tok = strtok(buffer[rand_sample], ",");
+        char *sample = malloc(sizeof(char) * LINE_BUFFER_SIZE);
+        strcpy(sample, buffer[rand_sample]);
+
+        /*// Tokenize and place i*/
+        /*char *tok = strsep(buffer[rand_sample], ",");*/
+        /*wihle (strsep(buffer[rand_sample], ",") != NULL)*/
+
+        /*free(sample);*/
 
         // If we reach our tolerance, refresh buffer on next invocation.
         if (dirty_hits >= (DIRTY_TOLERANCE * samples) && !needs_refresh) {
@@ -246,11 +253,18 @@ bool random_subsample(float **output_sample_buffer, char **buffer, int *dirty_bu
 
         // Read tokens into samples array
         int j = 0;
-        while (tok != NULL) {
+        char *tok;
+        while(tok = strsep(&sample, ",") != NULL) {
             int indexer = (i * elements_per_line) + j++;
             (*output_sample_buffer)[indexer] = (float) atof(tok);
-            tok = strtok(NULL, ",");
+            free(tok);
         }
+        free(sample);
+        /*while (tok != NULL) {*/
+            /*int indexer = (i * elements_per_line) + j++;*/
+            /*(*output_sample_buffer)[indexer] = (float) atof(tok);*/
+            /*tok = strtok(NULL, ",");*/
+        /*}*/
     }
 
     printf("Dirty hits:%d\n", dirty_hits);
