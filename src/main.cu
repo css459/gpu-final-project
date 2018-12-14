@@ -12,12 +12,12 @@ int main() {
 
     SamplingProperties props = make_properties(
             "test_data/xy.csv",        // csv_file_path
-            11209389,       // file_size
-            3000000,         // line_buffer_size
-            1000,           // random_chunk_size
-            21,             // elements_per_line
-            sizeof(float),  // element_size_bytes
-            4               // cuda_device_count
+            11209389,                  // file_size
+            3000000,                   // line_buffer_size
+            1000,                      // random_chunk_size
+            21,                        // elements_per_line
+            sizeof(float),             // element_size_bytes
+            4                          // cuda_device_count
             );
 
     float** cuda_samples = load_devices(&props);
