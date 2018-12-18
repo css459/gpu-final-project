@@ -11,11 +11,11 @@ from sklearn.model_selection import GridSearchCV
 
 # Whether or not to run the grid search in parallel
 # on the CPU
-PARALLEL = False
+PARALLEL = True
 
 print("Loading Data...")
 f = "test_data/xy.csv"
-buffersize = 3000000
+buffersize = 79739
 d = pd.read_csv(f)
 while len(d) < buffersize:
     d = d.append(pd.read_csv(f))
@@ -38,7 +38,7 @@ p = {
         'max_depth': [None, 10, 100]
     }
 
-rf = RandomForestClassifier()
+rf = RandomForestClassifier(verbose=True)
 
 if PARALLEL:
     clf = GridSearchCV(rf, p, n_jobs=-1)
