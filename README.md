@@ -8,7 +8,10 @@ Your GCC compiler must support OpenMP, and CUDA must be install,
 and of a recent version of at least CUDA 6.
 
 To compile and run this project, simply run `./build.sh`. This will
-load __4__ GPUs with the proper amount of data to 1% occupancy. It will
+load __4__ GPUs with the proper amount of data to 1% occupancy.
+
+To compile and run with a testing Random Forests running on top of the data loading,
+use the `./build-with-rf.sh`. It will
 then run a Grid Search of Random Forests across all GPUs.
 
 ## Tuning
@@ -49,4 +52,3 @@ provided in this project.
 This project assumes a single binary classifier put into the last position
 of the CSV file to load. As in, the last column should be only __0__ or __1__
 for each row.
-

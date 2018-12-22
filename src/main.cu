@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include "cuda_util.h"
 #include "sampling.h"
+#include "grid-search.h"
+
+int TESTING_WITH_RANDOM_FORESTS = 0;
 
 int main() {
 
@@ -21,6 +24,21 @@ int main() {
             );
 
     float** cuda_samples = load_devices(&props);
+
+    // if(TESTING_WITH_RANDOM_FORESTS == 1) {
+    //   // run GridSearch on RandomForests
+    //   int* results = grid_search(cuda_samples, &props);
+    //
+    //   printf("Optimal parameters chosen: [n, m, f]\n");
+    //   printf("n: number of estimators (trees), m = minimum size, d = maximum depth\n");
+    //   for(int i=0; i < sizeof(results) / sizeof(int); i++){
+    //     printf("%d ", results[i]);
+    //   }
+    // }
+
+    //
+    // free memory
+    //
 
     for (int i = 0; i < props.cuda_device_count; i++) cudaFree((void *) cuda_samples[i]);
     free(cuda_samples);
